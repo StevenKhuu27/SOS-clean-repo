@@ -1,0 +1,37 @@
+stages:
+  - build
+  - test
+  
+build-docker:
+  stage: build
+  tags:
+    - Shell
+  script:
+    - echo "Building Docker Image"
+    - docker build -t sos-cleaner:latest
+
+image: #specifies the image for each docker build (tag)
+  name: sos-cleaner:latest
+  entrypoint: [""]
+
+clean_pull:
+  stage: test
+  tags:
+    - Docker
+  script:
+  - >
+    wget
+    --no-check-certificate
+    --header=PRIVATE-TOKEN:${TOKEN}
+    <repo_link>
+    -P /var/tmp #destination
+  - mkdir /var/tmp/archive
+  - tar -zxvf /var/tmp/archive.tar.gz -C /var/tmp/archive #extracts
+  - rm -rf /tmp/archive* /tmp/sos* #removes old files in tmp that could prevent tar or sos
+  - echo | sos clean /var/tmp/archiove --keyword-file keyword 
+  #echo | will simulate an enter key press, keyword is a file of list of keywords that will be erased
+  - tar -czvf $CI_PROJECT_DIR/control-repo-archive.tar.gz /tmp/archive # puts it in the CI folder so artifacts can access
+  artifacts:
+    name: "$CI_JOB_NAME"
+    paths:
+      - control-repo-archive.tar.gz
